@@ -2,7 +2,6 @@
 
 ## General Task Guidelines
 
-* Please, **don't** change the **pipeline definition** (`.gitlab-ci.yml`).
 * Please make corrections per the principles/topics discussed so far in this course .
 * It is recommended that you complete the practical tasks for a topic before proceeding to the next topics.
 * A task/subtopic will be considered as complete after all the review comments are incorporated from the below mentioned review process.
