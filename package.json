@@ -7,7 +7,7 @@
         "test": "tests"
     },
     "scripts": {
-        "build": "tsc && npm run test",
+        "build": "tsc --rootDir src --outDir",
         "test": "jest --ci --reporters=default --reporters=jest-junit"
     },
     "keywords": [],
