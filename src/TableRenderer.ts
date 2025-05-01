@@ -1,131 +1,159 @@
 import { DataSet } from './thirdparty/DataSet';
+import {
+  PADDING_EVEN,
+  PADDING_ODD,
+  EMPTY_TABLE_MESSAGE_TEMPLATE,
+} from './constants'
 
 export class TableRenderer {
-    private static readonly PADDING_ADJUSTMENT_EVEN = 2;
-    private static readonly PADDING_ADJUSTMENT_ODD = 3;
+  /**
+   * Renders a table for the given data sets.
+   * @param tableName - The name of the table.
+   * @param dataSets - The data sets to render.
+   * @returns {string} The rendered table as a string.
+   */
+  public renderTable(tableName: string, dataSets: DataSet[]): string {
+    if (dataSets.length === 0) {
+      return this.renderEmptyTable(tableName)
+    }
 
-    /**
-     * Renders a table as a string.
-     * @param tableName - The name of the table.
-     * @param dataSets - The data sets to render.
-     * @returns {string} The rendered table.
-     */
-    public renderTable(tableName: string, dataSets: DataSet[]): string {
-        const maxColumnSize = this.calculateMaxColumnSize(dataSets);
-        if (maxColumnSize === 0) {
-            return this.renderEmptyTable(tableName);
+    const maxColumnWidth = this.calculateMaxColumnWidth(dataSets)
+    const columnCount = this.getColumnCount(dataSets)
+
+    const header = this.renderHeader(
+      dataSets[0].getColumnNames(),
+      maxColumnWidth,
+      columnCount,
+    )
+    const body = this.renderBody(dataSets, maxColumnWidth, columnCount)
+
+    return header + body
+  }
+
+  /**
+   * Renders an empty table message.
+   * @param tableName - The name of the table.
+   * @returns {string} The rendered empty table message.
+   */
+  private renderEmptyTable(tableName: string): string {
+    const message = EMPTY_TABLE_MESSAGE_TEMPLATE.replace(
+      '{tableName}',
+      tableName,
+    )
+    const border = '═'.repeat(message.length - 2)
+    return `╔${border}╗\n${message}\n╚${border}╝\n`
+  }
+
+  /**
+   * Renders the table header.
+   * @param columnNames - The names of the columns.
+   * @param columnWidth - The width of each column.
+   * @param columnCount - The number of columns.
+   * @returns {string} The rendered table header.
+   */
+  private renderHeader(
+    columnNames: string[],
+    columnWidth: number,
+    columnCount: number,
+  ): string {
+    let result = '╔'
+    result +=
+      ('═'.repeat(columnWidth) + '╦').repeat(columnCount - 1) +
+      '═'.repeat(columnWidth) +
+      '╗\n'
+
+    result += '║'
+    columnNames.forEach((name) => {
+      const padding = columnWidth - name.length
+      const padStart = Math.floor(padding / 2)
+      const padEnd = padding - padStart
+      result += ' '.repeat(padStart) + name + ' '.repeat(padEnd) + '║'
+    })
+    result += '\n'
+
+    result += '╠'
+    result +=
+      ('═'.repeat(columnWidth) + '╬').repeat(columnCount - 1) +
+      '═'.repeat(columnWidth) +
+      '╣\n'
+
+    return result
+  }
+
+  /**
+   * Renders the table body.
+   * @param dataSets - The data sets to render.
+   * @param columnWidth - The width of each column.
+   * @param columnCount - The number of columns.
+   * @returns {string} The rendered table body.
+   */
+  private renderBody(
+    dataSets: DataSet[],
+    columnWidth: number,
+    columnCount: number,
+  ): string {
+    let result = ''
+
+    dataSets.forEach((dataSet, rowIndex) => {
+      const values = dataSet.getValues()
+      result += '║'
+      values.forEach((value) => {
+        const valueString = String(value)
+        const padding = columnWidth - valueString.length
+        const padStart = Math.floor(padding / 2)
+        const padEnd = padding - padStart
+        result += ' '.repeat(padStart) + valueString + ' '.repeat(padEnd) + '║'
+      })
+      result += '\n'
+
+      if (rowIndex < dataSets.length - 1) {
+        result += '╠'
+        result +=
+          ('═'.repeat(columnWidth) + '╬').repeat(columnCount - 1) +
+          '═'.repeat(columnWidth) +
+          '╣\n'
+      }
+    })
+
+    result += '╚'
+    result +=
+      ('═'.repeat(columnWidth) + '╩').repeat(columnCount - 1) +
+      '═'.repeat(columnWidth) +
+      '╝\n'
+
+    return result
+  }
+
+  /**
+   * Calculates the maximum column width across all columns.
+   * @param dataSets - The data sets to analyze.
+   * @returns {number} The maximum column width.
+   */
+  private calculateMaxColumnWidth(dataSets: DataSet[]): number {
+    if (dataSets.length === 0) return 0
+
+    const columnNames = dataSets[0].getColumnNames()
+    let maxWidth = Math.max(...columnNames.map((name) => name.length))
+
+    dataSets.forEach((dataSet) => {
+      const values = dataSet.getValues()
+      values.forEach((value) => {
+        const valueLength = String(value).length
+        if (valueLength > maxWidth) {
+          maxWidth = valueLength
         }
+      })
+    })
 
-        const header = this.renderTableHeader(dataSets, maxColumnSize);
-        const body = this.renderTableBody(dataSets, maxColumnSize);
-        return header + body;
-    }
+    return maxWidth % 2 === 0 ? maxWidth + PADDING_EVEN : maxWidth + PADDING_ODD
+  }
 
-    /**
-     * Renders an empty table.
-     * @param tableName - The name of the table.
-     * @returns {string} The rendered empty table.
-     */
-    private renderEmptyTable(tableName: string): string {
-        const textEmptyTable = `║ Table '${tableName}' is empty or does not exist ║`;
-        const border = "═".repeat(textEmptyTable.length - 2);
-        return `╔${border}╗\n${textEmptyTable}\n╚${border}╝\n`;
-    }
-
-    /**
-     * Renders the header of the table.
-     * @param dataSets - The data sets to render.
-     * @param maxColumnSize - The maximum column size.
-     * @returns {string} The rendered table header.
-     */
-    private renderTableHeader(dataSets: DataSet[], maxColumnSize: number): string {
-        const adjustedColumnSize = this.adjustColumnSize(maxColumnSize);
-        const columnCount = this.getColumnCount(dataSets);
-        let result = `╔${("═".repeat(adjustedColumnSize) + "╦").repeat(columnCount - 1)}═`.repeat(adjustedColumnSize) + "╗\n";
-
-        const columnNames = dataSets[0].getColumnNames();
-        columnNames.forEach((columnName: string) => {
-            const padding = adjustedColumnSize - columnName.length;
-            const padStart = Math.floor(padding / 2);
-            const padEnd = padding - padStart;
-            result += `║${" ".repeat(padStart)}${columnName}${" ".repeat(padEnd)}`;
-        });
-        result += "║\n";
-        result += `╠${("═".repeat(adjustedColumnSize) + "╬").repeat(columnCount - 1)}═`.repeat(adjustedColumnSize) + "╣\n";
-        return result;
-    }
-
-    /**
-     * Renders the body of the table.
-     * @param dataSets - The data sets to render.
-     * @param maxColumnSize - The maximum column size.
-     * @returns {string} The rendered table body.
-     */
-    private renderTableBody(dataSets: DataSet[], maxColumnSize: number): string {
-        const adjustedColumnSize = this.adjustColumnSize(maxColumnSize);
-        const columnCount = this.getColumnCount(dataSets);
-        let result = "";
-
-        dataSets.forEach((dataSet, rowIndex) => {
-            const values = dataSet.getValues();
-            result += "║";
-            values.forEach((value: any) => {
-                const valueString = String(value);
-                const padding = adjustedColumnSize - valueString.length;
-                const padStart = Math.floor(padding / 2);
-                const padEnd = padding - padStart;
-                result += `${" ".repeat(padStart)}${valueString}${" ".repeat(padEnd)}║`;
-            });
-            result += "\n";
-
-            if (rowIndex < dataSets.length - 1) {
-                result += `╠${("═".repeat(adjustedColumnSize) + "╬").repeat(columnCount - 1)}═`.repeat(adjustedColumnSize) + "╣\n";
-            }
-        });
-
-        result += `╚${("═".repeat(adjustedColumnSize) + "╩").repeat(columnCount - 1)}═`.repeat(adjustedColumnSize) + "╝\n";
-        return result;
-    }
-
-    /**
-     * Calculates the maximum column size.
-     * @param dataSets - The data sets to analyze.
-     * @returns {number} The maximum column size.
-     */
-    private calculateMaxColumnSize(dataSets: DataSet[]): number {
-        let maxLength = 0;
-
-        if (dataSets.length > 0) {
-            const columnNames = dataSets[0].getColumnNames();
-            maxLength = Math.max(...columnNames.map(name => name.length));
-
-            dataSets.forEach(dataSet => {
-                dataSet.getValues().forEach(value => {
-                    maxLength = Math.max(maxLength, String(value).length);
-                });
-            });
-        }
-
-        return maxLength;
-    }
-
-    /**
-     * Adjusts the column size based on padding rules.
-     * @param maxColumnSize - The original column size.
-     * @returns {number} The adjusted column size.
-     */
-    private adjustColumnSize(maxColumnSize: number): number {
-        return maxColumnSize % 2 === 0
-            ? maxColumnSize + TableRenderer.PADDING_ADJUSTMENT_EVEN
-            : maxColumnSize + TableRenderer.PADDING_ADJUSTMENT_ODD;
-    }
-
-    /**
-     * Gets the number of columns in the table.
-     * @param dataSets - The data sets to analyze.
-     * @returns {number} The number of columns.
-     */
-    private getColumnCount(dataSets: DataSet[]): number {
-        return dataSets.length > 0 ? dataSets[0].getColumnNames().length : 0;
-    }
+  /**
+   * Gets the number of columns in the table.
+   * @param dataSets - The data sets to analyze.
+   * @returns {number} The number of columns.
+   */
+  private getColumnCount(dataSets: DataSet[]): number {
+    return dataSets.length > 0 ? dataSets[0].getColumnNames().length : 0
+  }
 }
