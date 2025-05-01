@@ -20,5 +20,8 @@
         "ts-jest": "^29.1.5",
         "ts-node": "^10.9.2",
         "typescript": "^5.5.3"
+    },
+    "dependencies": {
+        "@jest/globals": "^29.7.0"
     }
 }

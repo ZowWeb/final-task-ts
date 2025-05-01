@@ -1,117 +1,148 @@
 import { View } from './thirdparty/View';
-import {DatabaseManager} from './thirdparty/DatabaseManager';
-import {Command} from './thirdparty/Command';
-import {DataSet} from './thirdparty/DataSet';
+import { DatabaseManager } from './thirdparty/DatabaseManager'
+import { Command } from './thirdparty/Command'
+import { DataSet } from './thirdparty/DataSet'
 
 export class Print implements Command {
-    private view: View;
-    private manager: DatabaseManager;
-    private tableName: string = '';
+  private view: View
+  private manager: DatabaseManager
 
-    constructor(view: View, manager: DatabaseManager) {
-        this.view = view;
-        this.manager = manager;
+  constructor(view: View, manager: DatabaseManager) {
+    this.view = view
+    this.manager = manager
+  }
+
+  canProcess(command: string): boolean {
+    return command.startsWith('print ')
+  }
+
+  process(input: string): void {
+    const commandParts = input.split(' ')
+    if (commandParts.length !== 2) {
+      throw new Error(
+        `incorrect number of parameters. Expected 1, but is ${
+          commandParts.length - 1
+        }`,
+      )
     }
 
-    canProcess(command: string): boolean {
-        return command.startsWith("print ");
-    }
+    const tableName = commandParts[1]
+    const data = this.manager.getTableData(tableName)
 
-    process(input: string): void {
-        const command = input.split(" ");
-        if (command.length !== 2) {
-            throw new Error(`incorrect number of parameters. Expected 1, but is ${command.length - 1}`);
+    if (data.length === 0) {
+      this.view.write(this.renderEmptyTable(tableName))
+    } else {
+      this.view.write(this.renderTable(data))
+    }
+  }
+
+  private renderEmptyTable(tableName: string): string {
+    const message = `║ Table '${tableName}' is empty or does not exist ║`
+    const border = '═'.repeat(message.length - 2)
+    return `╔${border}╗\n${message}\n╚${border}╝\n`
+  }
+
+  private renderTable(dataSets: DataSet[]): string {
+    const maxColumnWidth = this.calculateMaxColumnWidth(dataSets)
+    const columnCount = this.getColumnCount(dataSets)
+
+    const header = this.renderHeader(
+      dataSets[0].getColumnNames(),
+      maxColumnWidth,
+      columnCount,
+    )
+    const body = this.renderBody(dataSets, maxColumnWidth, columnCount)
+
+    return header + body
+  }
+
+  private renderHeader(
+    columnNames: string[],
+    columnWidth: number,
+    columnCount: number,
+  ): string {
+    let result = '╔'
+    result +=
+      ('═'.repeat(columnWidth) + '╦').repeat(columnCount - 1) +
+      '═'.repeat(columnWidth) +
+      '╗\n'
+
+    result += '║'
+    columnNames.forEach((name) => {
+      const padding = columnWidth - name.length
+      const padStart = Math.floor(padding / 2)
+      const padEnd = padding - padStart
+      result += ' '.repeat(padStart) + name + ' '.repeat(padEnd) + '║'
+    })
+    result += '\n'
+
+    result += '╠'
+    result +=
+      ('═'.repeat(columnWidth) + '╬').repeat(columnCount - 1) +
+      '═'.repeat(columnWidth) +
+      '╣\n'
+
+    return result
+  }
+
+  private renderBody(
+    dataSets: DataSet[],
+    columnWidth: number,
+    columnCount: number,
+  ): string {
+    let result = ''
+
+    dataSets.forEach((dataSet, rowIndex) => {
+      const values = dataSet.getValues()
+      result += '║'
+      values.forEach((value) => {
+        const valueString = String(value)
+        const padding = columnWidth - valueString.length
+        const padStart = Math.floor(padding / 2)
+        const padEnd = padding - padStart
+        result += ' '.repeat(padStart) + valueString + ' '.repeat(padEnd) + '║'
+      })
+      result += '\n'
+
+      if (rowIndex < dataSets.length - 1) {
+        result += '╠'
+        result +=
+          ('═'.repeat(columnWidth) + '╬').repeat(columnCount - 1) +
+          '═'.repeat(columnWidth) +
+          '╣\n'
+      }
+    })
+
+    result += '╚'
+    result +=
+      ('═'.repeat(columnWidth) + '╩').repeat(columnCount - 1) +
+      '═'.repeat(columnWidth) +
+      '╝\n'
+
+    return result
+  }
+
+  private calculateMaxColumnWidth(dataSets: DataSet[]): number {
+    if (dataSets.length === 0) return 0
+
+    const columnNames = dataSets[0].getColumnNames()
+    let maxWidth = Math.max(...columnNames.map((name) => name.length))
+
+    dataSets.forEach((dataSet) => {
+      const values = dataSet.getValues()
+      values.forEach((value) => {
+        const valueLength = String(value).length
+        if (valueLength > maxWidth) {
+          maxWidth = valueLength
         }
-        this.tableName = command[1];
-        const data = this.manager.getTableData(this.tableName);
-        this.view.write(this.getTableString(data));
-    }
+      })
+    })
 
-    private getTableString(data: DataSet[]): string {
-        let maxColumnSize = this.getMaxColumnSize(data);
-        if (maxColumnSize === 0) {
-            return this.getEmptyTable(this.tableName);
-        } else {
-            return this.getHeaderOfTheTable(data) + this.getStringTableData(data);
-        }
-    }
+    // Add padding to ensure consistent spacing
+    return maxWidth % 2 === 0 ? maxWidth + 2 : maxWidth + 3
+  }
 
-    private getEmptyTable(tableName: string): string {
-        const textEmptyTable = `║ Table '${tableName}' is empty or does not exist ║`;
-        let result = "╔" + "═".repeat(textEmptyTable.length - 2) + "╗\n";
-        result += textEmptyTable + "\n";
-        result += "╚" + "═".repeat(textEmptyTable.length - 2) + "╝\n";
-        return result;
-    }
-
-    private getMaxColumnSize(dataSets: DataSet[]): number {
-        let maxLength = 0;
-        if (dataSets.length > 0) {
-            const columnNames = dataSets[0].getColumnNames();
-            columnNames.forEach((columnName: string | any[]) => {
-                if (columnName.length > maxLength) {
-                    maxLength = columnName.length;
-                }
-            });
-            dataSets.forEach(dataSet => {
-                dataSet.getValues().forEach((value: any) => {
-                    const valueLength = String(value).length;
-                    if (valueLength > maxLength) {
-                        maxLength = valueLength;
-                    }
-                });
-            });
-        }
-        return maxLength;
-    }
-
-    private getStringTableData(dataSets: DataSet[]): string {
-        let result = "";
-        const rowsCount = dataSets.length;
-        let maxColumnSize = this.getMaxColumnSize(dataSets);
-        maxColumnSize = maxColumnSize % 2 === 0 ? maxColumnSize + 2 : maxColumnSize + 3;
-        const columnCount = this.getColumnCount(dataSets);
-
-        for (let row = 0; row < rowsCount; row++) {
-            const values = dataSets[row].getValues();
-            result += "║";
-            for (let column = 0; column < columnCount; column++) {
-                const valueString = String(values[column]);
-                const padding = maxColumnSize - valueString.length;
-                const padStart = Math.floor(padding / 2);
-                const padEnd = padding - padStart;
-                result += " ".repeat(padStart) + valueString + " ".repeat(padEnd) + "║";
-            }
-            result += "\n";
-            if (row < rowsCount - 1) {
-                result += "╠" + ("═".repeat(maxColumnSize) + "╬").repeat(columnCount - 1) + "═".repeat(maxColumnSize) + "╣\n";
-            }
-        }
-        result += "╚" + ("═".repeat(maxColumnSize) + "╩").repeat(columnCount - 1) + "═".repeat(maxColumnSize) + "╝\n";
-        return result;
-    }
-
-    private getColumnCount(dataSets: DataSet[]): number {
-        if (dataSets.length > 0) {
-            return dataSets[0].getColumnNames().length;
-        }
-        return 0;
-    }
-
-    private getHeaderOfTheTable(dataSets: DataSet[]): string {
-        let result = "";
-        const maxColumnSize = this.getMaxColumnSize(dataSets) % 2 === 0 ? this.getMaxColumnSize(dataSets) + 2 : this.getMaxColumnSize(dataSets) + 3;
-        const columnCount = this.getColumnCount(dataSets);
-        result += "╔" + ("═".repeat(maxColumnSize) + "╦").repeat(columnCount - 1) + "═".repeat(maxColumnSize) + "╗\n";
-        const columnNames = dataSets[0].getColumnNames();
-        columnNames.forEach((columnName: string | any[]) => {
-            const padding = maxColumnSize - columnName.length;
-            const padStart = Math.floor(padding / 2);
-            const padEnd = padding - padStart;
-            result += "║" + " ".repeat(padStart) + columnName + " ".repeat(padEnd);
-        });
-        result += "║\n";
-        result += "╠" + ("═".repeat(maxColumnSize) + "╬").repeat(columnCount - 1) + "═".repeat(maxColumnSize) + "╣\n";
-        return result;
-    }
+  private getColumnCount(dataSets: DataSet[]): number {
+    return dataSets.length > 0 ? dataSets[0].getColumnNames().length : 0
+  }
 }

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest tests" tests="8" failures="0" errors="0" time="0.605">
+  <testsuite name="PrintTest" errors="0" failures="0" skipped="0" timestamp="2025-05-01T12:56:03" time="0.567" tests="8">
+    <testcase classname="PrintTest should Print Table With One Column" name="PrintTest should Print Table With One Column" time="0.003">
+    </testcase>
+    <testcase classname="PrintTest should Print Table With Padding When One Short Column" name="PrintTest should Print Table With Padding When One Short Column" time="0">
+    </testcase>
+    <testcase classname="PrintTest should Print All Column Lengths With The Longest Value" name="PrintTest should Print All Column Lengths With The Longest Value" time="0">
+    </testcase>
+    <testcase classname="PrintTest should Print Message For Not Existing Table" name="PrintTest should Print Message For Not Existing Table" time="0">
+    </testcase>
+    <testcase classname="PrintTest should Throw Exception When Command Is Wrong" name="PrintTest should Throw Exception When Command Is Wrong" time="0.003">
+    </testcase>
+    <testcase classname="PrintTest should Process Valid Command" name="PrintTest should Process Valid Command" time="0">
+    </testcase>
+    <testcase classname="PrintTest should Not Process Invalid Command" name="PrintTest should Not Process Invalid Command" time="0">
+    </testcase>
+    <testcase classname="PrintTest should Print Table With Multi DataSets" name="PrintTest should Print Table With Multi DataSets" time="0">
+    </testcase>
+  </testsuite>
+</testsuites>
